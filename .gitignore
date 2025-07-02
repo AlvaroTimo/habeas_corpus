@@ -1,0 +1,11 @@
+# Ignoramos carpetas irrelevantes
+descargas/
+output/
+pdfs/
+.vscode/
+
+*.pdf
+
+# Ignorar archivos irrelevantes
+prueba.py
+temporal.py
