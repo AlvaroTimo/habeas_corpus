@@ -111,8 +111,9 @@ def main():
     total_indices = len(links_stj)
 
     # Estas lineas de codigo son para retomar el web scrapping donde lo dejamos
-    ultimo_indice_descargado = 48
+    ultimo_indice_descargado = 0
 
+    
     indices_stj = indices_stj[ultimo_indice_descargado:]
     links_stj = links_stj[ultimo_indice_descargado:]
 
@@ -122,8 +123,9 @@ def main():
 
     all_extracted_urls = []
 
-    try:
-        for idx, url in enumerate(links_stj, 1):
+    wait_time = random.uniform(1, 3)
+    for idx, url in enumerate(links_stj, 1):
+        try:
             logging.info(f"Procesando link con indice {idx + ultimo_indice_descargado - 1}/{total_indices}: {url}")
 
             if ir_a_decisiones(driver, url):
@@ -152,12 +154,12 @@ def main():
                     )
 
                     if pdf.status_code == 200:
-                        with open(f"./pdfs/documento_{links_stj[idx-1]}_{numero_documento}.pdf", "wb") as f:
+                        with open(f"./pdfs/documento_{indices_stj[idx-1]}_{numero_documento}.pdf", "wb") as f:
                             f.write(pdf.content)
-                        logging.info(f"PDF_{links_stj[idx-1]}_{numero_documento} descargado correctamente.")
+                        logging.info(f"PDF_{indices_stj[idx-1]}_{numero_documento} descargado correctamente.")
                         numero_documento += 1
                     else:
-                        logging.info(f"Error al descargar el PDF_{links_stj[idx-1]}_{numero_documento}. Código de estado: {pdf.status_code}")
+                        logging.info(f"Error al descargar el PDF_{indices_stj[idx-1]}_{numero_documento}. Código de estado: {pdf.status_code}")
 
                     driver.switch_to.window(driver.window_handles[0])
                 all_extracted_urls.extend(urls_extraidas)
@@ -172,19 +174,25 @@ def main():
                 time.sleep(wait_time)
                 driver = configurar_driver()
 
-    except Exception as e:
-        logging.error(e)
+        except Exception as e:
+            logging.error(e)
+            with open("errores.txt", "a") as archivo:
+                archivo.write(f"{indices_stj[idx-1]}\n")
 
-    finally:
-        driver.quit()
-        logging.info("Driver cerrado correctamente.")
+            driver.quit()
+            time.sleep(wait_time)
+            driver = configurar_driver()
 
-        if all_extracted_urls:
-            df_out = pd.DataFrame({"urls_documentos": all_extracted_urls})
-            df_out.to_csv("urls_documentos_stj.csv", index=False)
-            logging.info("Se guardaron las URLs extraídas en urls_documentos_stj.csv.")
-        else:
-            logging.info("No se extrajo ninguna URL.")
+
+    driver.quit()
+    logging.info("Driver cerrado correctamente.")
+
+    if all_extracted_urls:
+        df_out = pd.DataFrame({"urls_documentos": all_extracted_urls})
+        df_out.to_csv("urls_documentos_stj.csv", index=False)
+        logging.info("Se guardaron las URLs extraídas en urls_documentos_stj.csv.")
+    else:
+        logging.info("No se extrajo ninguna URL.")
 
 if __name__ == "__main__":
     main()
