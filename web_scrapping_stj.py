@@ -10,12 +10,13 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 
-# Para descargar los datasets
+# Para descargar los pdfs
 import os
 import requests
 
-#Libreria temporal para hcaer pruebas
+#Libreria temporal
 import time
+import random
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -26,8 +27,11 @@ def configurar_driver():
         "user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
     )
     opts.add_argument("--disable-search-engine-choice-screen")
-    prefs = {"download.default_directory": "/home/alvaro/Documentos/FGV/pdfs"}
-    opts.add_experimental_option("prefs", prefs)
+    #opts.add_argument("--headless")
+
+    #Estamos descargando con request no con selenium
+    #prefs = {"download.default_directory": "/home/alvaro/Documentos/FGV/pdfs"}
+    #opts.add_experimental_option("prefs", prefs)
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
     return driver
@@ -37,7 +41,7 @@ def ir_a_decisiones(driver, url):
 
     try:
         logging.info(f"Esperando botón de decisiones en: {url}")
-        decisiones_btn = WebDriverWait(driver, 10).until(
+        decisiones_btn = WebDriverWait(driver, 100).until(
             EC.element_to_be_clickable((By.XPATH, "//span[@id='idSpanAbaDecisoes']"))
         )
         decisiones_btn.click()
@@ -49,12 +53,18 @@ def ir_a_decisiones(driver, url):
 
 def obtener_documentos(driver):
     try:
-        documentos = WebDriverWait(driver, 10).until(
+        documentos = WebDriverWait(driver, 100).until(
             EC.presence_of_all_elements_located((
                 By.XPATH,
                 "//div[@id='idDivDecisoes']//div[@class='clsDecisoesMonocraticasBlocoInterno' or @class='clsDecisoesIntTeorRevistaLinhaTodosDocumentos']"
             ))
+
+            #EC.presence_of_all_elements_located((
+            #    By.XPATH,
+            #    "//div[@id='idDivDecisoes']//div[@class='clsDecisoesIntTeorRevistaLinhaTodosDocumentos']"
+            #))
         )
+
         logging.info(f"Se encontraron {len(documentos)} documentos.")
         return documentos
     except TimeoutException:
@@ -80,8 +90,9 @@ def extraer_urls(documentos):
             logging.warning("Documento sin enlace encontrado.")
     return urls
 
+
+
 def main():
-    # Leer CSV
     df = pd.read_csv(
         "dataset_limpio_final.csv",
         header=0,
@@ -94,7 +105,16 @@ def main():
         df["link"].notna() & df["link"].str.startswith("https://processo.stj.jus.br")
     ]
 
+    indices_stj = df_stj.index.tolist()
     links_stj = df_stj["link"].tolist()
+
+    total_indices = len(links_stj)
+
+    # Estas lineas de codigo son para retomar el web scrapping donde lo dejamos
+    ultimo_indice_descargado = 48
+
+    indices_stj = indices_stj[ultimo_indice_descargado:]
+    links_stj = links_stj[ultimo_indice_descargado:]
 
     logging.info(f"Se encontraron {len(links_stj)} links STJ en el CSV.")
 
@@ -104,57 +124,67 @@ def main():
 
     try:
         for idx, url in enumerate(links_stj, 1):
-            logging.info(f"Procesando link {idx}/{len(links_stj)}: {url}")
+            logging.info(f"Procesando link con indice {idx + ultimo_indice_descargado - 1}/{total_indices}: {url}")
 
             if ir_a_decisiones(driver, url):
                 documentos = obtener_documentos(driver)
                 urls_extraidas = extraer_urls(documentos)
 
                 #Aqui podemos agregar una nueva columna al dataset con las urls?? (luego borramos todas las filas que no tengan urls)
-                #Contador temporal, arreglar, porque sobreescribira si lo aplicamos a todo el dataset
-                
-                contador = 0
+                numero_documento = 0
                 for url_extraida in urls_extraidas:
                     driver.execute_script(
                         "window.open(arguments[0], '_blank');", url_extraida
                     )
                     driver.switch_to.window(driver.window_handles[1])
-                    url_sin_iframe = driver.find_element("xpath","//div//a").get_attribute("href")
+
+                    url_sin_iframe = WebDriverWait(driver, 100).until(
+                        EC.presence_of_element_located((By.XPATH, "//div[@align='right']//a"))
+                    ).get_attribute("href")
+
                     driver.close()
                     
                     driver.switch_to.window(driver.window_handles[0])
 
-                    pdf = requests.get(url_sin_iframe)
-                    if pdf.status_code == 200:
-                        with open(f"documento_{contador}.pdf", "wb") as f:
-                            f.write(pdf.content)
-                        contador+=1
-                        print("PDF descargado correctamente.")
-                    else:
-                        print(f"Error al descargar el PDF. Código de estado: {pdf.status_code}")
+                    pdf = requests.get(
+                        url_sin_iframe,
+                        stream=True
+                    )
 
+                    if pdf.status_code == 200:
+                        with open(f"./pdfs/documento_{links_stj[idx-1]}_{numero_documento}.pdf", "wb") as f:
+                            f.write(pdf.content)
+                        logging.info(f"PDF_{links_stj[idx-1]}_{numero_documento} descargado correctamente.")
+                        numero_documento += 1
+                    else:
+                        logging.info(f"Error al descargar el PDF_{links_stj[idx-1]}_{numero_documento}. Código de estado: {pdf.status_code}")
 
                     driver.switch_to.window(driver.window_handles[0])
-
-
                 all_extracted_urls.extend(urls_extraidas)
             else:
                 logging.error(f"No se pudo acceder a la pestaña de decisiones en: {url}")
+            
+            wait_time = random.uniform(1, 3)
+            time.sleep(wait_time)
 
-            # break de prueba para cortar las descargas con la primera url
-            break
+            if idx % 50 == 0:
+                driver.quit()
+                time.sleep(wait_time)
+                driver = configurar_driver()
+
+    except Exception as e:
+        logging.error(e)
 
     finally:
         driver.quit()
         logging.info("Driver cerrado correctamente.")
 
-    # Opcional: guardar las URLs extraídas en CSV
-    if all_extracted_urls:
-        df_out = pd.DataFrame({"urls_documentos": all_extracted_urls})
-        df_out.to_csv("urls_documentos_stj.csv", index=False)
-        logging.info("Se guardaron las URLs extraídas en urls_documentos_stj.csv.")
-    else:
-        logging.info("No se extrajo ninguna URL.")
+        if all_extracted_urls:
+            df_out = pd.DataFrame({"urls_documentos": all_extracted_urls})
+            df_out.to_csv("urls_documentos_stj.csv", index=False)
+            logging.info("Se guardaron las URLs extraídas en urls_documentos_stj.csv.")
+        else:
+            logging.info("No se extrajo ninguna URL.")
 
 if __name__ == "__main__":
     main()
