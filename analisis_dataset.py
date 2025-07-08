@@ -7,16 +7,14 @@ df = pd.read_csv(
     na_values=["", " ", "  "]
 )
 
-#Agregamos indices
 df.insert(0, "indice", df.index)
-
-#Limpiamos espacios antes y despues de los links para luego eliminar los repetidos
 df["link"] = df["link"].str.strip()
 df = df.drop_duplicates(subset=["link"])
 
-# Eliminar columnas completamente vacías
 df = df.dropna(axis=1, how='all')
 print(f"Shape después de eliminar columnas vacías: {df.shape}")
+
+# Tal vez podemos dropear los links que son iguales
 
 #print("\nValores faltantes por columna (ordenado):\n")
 #print(df.isna().sum().sort_values(ascending=False))
@@ -32,9 +30,8 @@ print(nan_counts[nan_counts > 80000])
 df = df.loc[:, nan_counts <= 80000]
 print(f"\nShape después de eliminar columnas con >80,000 NaN: {df.shape}") """
 
-# Guardar el CSV limpio actualizado
-df.to_csv("dataset_limpio_final.csv", index=False, encoding='utf-8')
-print("¡CSV final guardado con columnas filtradas!")
+df.to_csv("dataset_limpio_final.csv", encoding='utf-8')
+print("CSV final guardado")
 
 """ print("\nValores faltantes por columna (ordenado) despues de eliminar columnas:\n")
 print(df.isna().sum().sort_values(ascending=False))

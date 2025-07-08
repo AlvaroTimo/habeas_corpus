@@ -10,35 +10,34 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 
-# Para descargar los pdfs
 import os
 import requests
 
-#Libreria temporal
 import time
 import random
 
-# Configurar logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def configurar_driver():
     opts = Options()
+
     opts.add_argument(
         "user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
     )
-    opts.add_argument("--disable-search-engine-choice-screen")
-    #opts.add_argument("--headless")
 
-    #Estamos descargando con request no con selenium
-    #prefs = {"download.default_directory": "/home/alvaro/Documentos/FGV/pdfs"}
-    #opts.add_experimental_option("prefs", prefs)
+    opts.add_argument("--disable-search-engine-choice-screen")
+    opts.add_argument('--headless=new')
+
+    prefs = {
+        "download_restrictions": 3,
+    }
+    opts.add_experimental_option("prefs", prefs)
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
     return driver
 
 def ir_a_decisiones(driver, url):
     driver.get(url)
-
     try:
         logging.info(f"Esperando botón de decisiones en: {url}")
         decisiones_btn = WebDriverWait(driver, 100).until(
@@ -90,8 +89,6 @@ def extraer_urls(documentos):
             logging.warning("Documento sin enlace encontrado.")
     return urls
 
-
-
 def main():
     df = pd.read_csv(
         "dataset_limpio_final.csv",
@@ -100,22 +97,18 @@ def main():
         na_values=["", " ", "  "]
     )
 
-    # Filtrar solo los links STJ
+    ultimo_indice_descargado = 34619
+
     df_stj = df[
-        df["link"].notna() & df["link"].str.startswith("https://processo.stj.jus.br")
+        (df.index >= ultimo_indice_descargado) &
+        df["link"].notna() &
+        df["link"].str.startswith("https://processo.stj.jus.br")
     ]
 
     indices_stj = df_stj.index.tolist()
     links_stj = df_stj["link"].tolist()
 
     total_indices = len(links_stj)
-
-    # Estas lineas de codigo son para retomar el web scrapping donde lo dejamos
-    ultimo_indice_descargado = 0
-
-    
-    indices_stj = indices_stj[ultimo_indice_descargado:]
-    links_stj = links_stj[ultimo_indice_descargado:]
 
     logging.info(f"Se encontraron {len(links_stj)} links STJ en el CSV.")
 
@@ -126,7 +119,7 @@ def main():
     wait_time = random.uniform(1, 3)
     for idx, url in enumerate(links_stj, 1):
         try:
-            logging.info(f"Procesando link con indice {idx + ultimo_indice_descargado - 1}/{total_indices}: {url}")
+            logging.info(f"Procesando link con indice {idx + ultimo_indice_descargado - 1}/{total_indices + ultimo_indice_descargado - 1}: {url}")
 
             if ir_a_decisiones(driver, url):
                 documentos = obtener_documentos(driver)
@@ -154,7 +147,7 @@ def main():
                     )
 
                     if pdf.status_code == 200:
-                        with open(f"./pdfs/documento_{indices_stj[idx-1]}_{numero_documento}.pdf", "wb") as f:
+                        with open(f"./pdfs_stj/documento_{indices_stj[idx-1]}_{numero_documento}.pdf", "wb") as f:
                             f.write(pdf.content)
                         logging.info(f"PDF_{indices_stj[idx-1]}_{numero_documento} descargado correctamente.")
                         numero_documento += 1
