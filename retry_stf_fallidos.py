@@ -172,15 +172,6 @@ def main():
             df_stf["link"].str.startswith("https://portal.stf.jus.br/")
         ]
         logging.info(f"Reintentando {len(df_stf)} links desde archivo de errores.")
-    else:
-        # Ejecución normal
-        ultimo_indice_descargado = 804
-        df_stf = df[
-            (df.index >= ultimo_indice_descargado) &
-            df["link"].notna() &
-            df["link"].str.startswith("https://portal.stf.jus.br/")
-        ]
-        logging.info(f"Se encontraron {len(df_stf)} links STF en el CSV.")
 
     if df_stf.empty:
         logging.info("No hay links válidos para procesar.")
@@ -189,7 +180,7 @@ def main():
     indices_stf = df_stf.index.tolist()
     links_stf = df_stf["link"].tolist()
 
-    download_path = "/home/alvaro/Documentos/FGV/pdfs_stf"
+    download_path = "/home/alvaro/Documentos/FGV/pdfs_stf_fallidos"
     driver = configurar_driver(download_path)
     habilitar_descargas_driver(driver, download_path)
 

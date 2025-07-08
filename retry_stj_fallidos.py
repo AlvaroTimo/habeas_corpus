@@ -17,7 +17,6 @@ import random
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-
 def configurar_driver():
     opts = Options()
     opts.add_argument(
@@ -129,8 +128,6 @@ def main():
 
     driver = configurar_driver()
 
-    all_extracted = []
-
     for idx, row in df_errores.iterrows():
         link = row["link"]
         try:
@@ -155,18 +152,13 @@ def main():
 
                     pdf = requests.get(url_sin_iframe, stream=True)
                     if pdf.status_code == 200:
-                        pdf_path = f"./pdfs_stj/documento_{idx}_{numero_documento}.pdf"
+                        pdf_path = f"./pdfs_stj_fallidos/documento_{idx}_{numero_documento}.pdf"
                         with open(pdf_path, "wb") as f:
                             f.write(pdf.content)
                         logging.info(f"PDF_{idx}_{numero_documento} descargado correctamente.")
                         numero_documento += 1
                     else:
                         logging.warning(f"Error al descargar el PDF_{idx}_{numero_documento}. Status: {pdf.status_code}")
-
-                all_extracted.append({
-                    "indice": idx,
-                    "urls_documentos": ";".join(urls_extraidas) if urls_extraidas else None
-                })
 
             else:
                 logging.error(f"No se pudo acceder a la pestaña de decisiones en {link}")
@@ -183,14 +175,6 @@ def main():
             driver = configurar_driver()
 
     driver.quit()
-
-    if all_extracted:
-        df_out = pd.DataFrame(all_extracted)
-        df_out.to_csv("urls_documentos_stj_retry.csv", index=False)
-        logging.info("Se guardaron las URLs extraídas en urls_documentos_stj_retry.csv.")
-    else:
-        logging.info("No se extrajeron URLs en este intento.")
-
 
 if __name__ == "__main__":
     main()
