@@ -2,6 +2,8 @@
 descargas/
 output/
 pdfs/
+pdfs_stf/
+pdfs_stj/
 .vscode/
 
 *.pdf
