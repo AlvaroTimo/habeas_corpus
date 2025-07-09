@@ -1,5 +1,8 @@
 import pandas as pd
 
+# Nos falta arreglar las columnas en las que la fecha no sea una fecha entonces, si la siguiente columna es una fecha,
+# fusionamos en asunto todas las columnas hasta llegar a la fecha 
+
 df = pd.read_csv(
     "dataset_limpio.csv",
     header=0,

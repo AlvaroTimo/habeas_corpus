@@ -122,7 +122,7 @@ def renombrar_documento(download_path, nuevo_nombre, timeout=60):
         logging.info("Se renombro el archivo descargado")
         return True
     except:
-        loggin.error(f"Error al renombrar el documento {nuevo_nombre}")
+        logging.error(f"Error al renombrar el documento {nuevo_nombre}")
 
 def main():
     df = pd.read_csv(
@@ -132,7 +132,7 @@ def main():
         na_values=["", " ", "  "]
     )
 
-    ultimo_indice_descargado = 804
+    ultimo_indice_descargado = 4126
 
     df_stf = df[
         (df.index >= ultimo_indice_descargado) &
