@@ -1,0 +1,22 @@
+poetry config --list
+# Eso de arriba para ver configuracion, si queremos crear el entorno virtual en la carpeta en la que estamos hacemos esto 
+
+poetry config virtualenvs.in-project true
+
+# Luego creamos el pyproject.toml
+poetry init
+
+# Si el pyproject.toml ya esta definido hacemos poetry install
+
+# Luego enter enter enter 
+poetry shell para que cree el entorno virtual y nos coloque en el
+
+# Luego para ir descargando dependencias hacemos
+poetry add <nombre_paquete>
+
+# Eso creara el poetry.lock
+
+# Finalmente para ejecutar codigo hacemos
+poetry run python <nombre_script>
+
+# Esto nos asegura que estamos corriendo nuestro codigo desde nuestro entorno virtual y no de otro lado

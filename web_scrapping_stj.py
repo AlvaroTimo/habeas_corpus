@@ -97,7 +97,7 @@ def main():
         na_values=["", " ", "  "]
     )
 
-    ultimo_indice_descargado = 36315
+    ultimo_indice_descargado = 48727
 
     df_stj = df[
         (df.index >= ultimo_indice_descargado) &

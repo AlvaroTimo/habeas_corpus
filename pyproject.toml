@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "fgv"
+version = "0.1.0"
+description = ""
+authors = ["Alvaro"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pandas = "^2.3.1"
+selenium = "^4.34.2"
+webdriver-manager = "^4.0.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
